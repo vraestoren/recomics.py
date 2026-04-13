@@ -25,8 +25,7 @@ class Recomics:
 			password: str) -> dict:
 		data = {
 			"user": username,
-			"password": password,
-			"g-recaptcha-response": self.generate_captcha()
+			"password": password
 		}
 		response = self._post("/api/users/login/", data)
 		if "content" in response:
