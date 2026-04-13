@@ -3,7 +3,6 @@ from requests import session
 class Recomics:
 	def __init__(self) -> None:
 		self.api = "https://api.recomics.org"
-		self.recaptcha_api = "https://www.google.com/recaptcha/api2"
 		self.session = Session()
 		self.session.headers = {
 			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.114 Safari/537.36"
@@ -11,39 +10,14 @@ class Recomics:
 		self.user_id = None
 		self.access_token = None
 
-	def generate_captcha(
-			self,
-			hl: str = "en",
-			vh: int = 171805507,
-			cb: str = "x8tfd89z6xpn",
-			size: str = "invisible",
-			chr: str = "[88,91,94]",
-			v: str = "PRMRaAwB3KlylGQR57Dyk-pF",
-			key: str = "6LdGNc8UAAAAAOi7mZdoujfQ0s-zHexDM8AWyB1J",
-			co: str = "aHR0cHM6Ly9uZXh0LnJlbWFuZ2Eub3JnOjQ0Mw..",
-			bg: str = "!u72gvbgKAAQeG9ujbQEHDwNQThjPgVnP7bQGfGtLFTSQ9q7PRWq4Mo6wTK1hF6mTmob321ueoFddZBgl3CNxklbmAd_8x8YxYDs5QrjL7dUsYncpMGmkgC7zGhUD0BwVc3v8cz2Bpap3IHwTDlUSNRYp9EyzZ3WTmkn72WjZixVOb5MJrD7nfwq2T8c8XaIINt60LWpEgRbduOLUxBAynNNCbWdx4R_dhxK7wkXMFMv34aAr9Q8Kj7BGQqoXIU4Ipj_fUd_cuXF4AdbcCERBSRyELilo5WyMkx3yZA_SdwkCg1Dq9JvAHKlhw5nSl49hjcLvBdppQxiX40G_7-wW8f1yOHrBCCut2YB7fGS6TzqRroQhmwufQeuleX1aWRIX-gmXhVdv2-NscuqGbMCugcxXC6GIJK_E3I4fkr5TT6_J4KnmjJLIB23LVrax3N2Da7QXpEq6PhA1WGLrCKxdzONe46StOcc-tKK_zlbg2UCLm0GPV_Ai1qmKKipyCErtZIE4nuqUxbHddY6DUQ_a7tWEA_yDT5Y9txb5XdsdtpLPOULrzElUGyHDKD51acbNfw6sUk5c33LZl20XMJc9sTFSitCX_B1lTMyR63g6FMeZGcFshiVb8-kFdwSlphiiJRTc4hruXo-PtQKM1ZnU0mL2HfQ8D20qDrQIkRI2mMs8QV6vX0zhbCFQ4r6HMdKQQgvlPdox3JjwmXMdVX1jV_wx3JWObthRfEXocF39Km-hQYC-TP06Biej705zlTtXVQ5v5sMgDzBAfYP0sDUr9cjYplzKZ6rkxpCc3BOF1K2Tkfy4JN1mm5l9RpcayJHQyOlCBH_DsTbxqdTESD8uwSGZeTn7uEytRv3-AHA98Qr-gexjL1kEu4ZJBwFHfNIZTP2HSz8Wadvvtc-8pzkn74xljxgvhlbzl9tgshMv5mqicfwSv6rxKy0VWKLk66PwSRsNQM1y77SLQ3c3b73tpv7-c9MgyinRnc-SuxKOdPJLVUiXxd4hhcz7g1fyLSh_LaskcEMTWPKm_uAKHUPy1d7UerHiUc31CdFQaEi6X-knv_d2wVeQtYQhb0WKwfVPNLtbRhbZeMSFtzJWVpwvLq3pyWBvBcVxfvhmCLFAyRcalZLhcRoqXeLorrrwq6mBqBKcAEaCJSJCY7wmqzJbvhTimQGmw1GsPo5rfTeXVfEyJ8TBFTVcAETA_Cl6ea0QWEErqn22tv5EXs7tLRdbYr0jIX3ObDYfJoEq*") -> str:
-		parameters = (
-            f"v={v}&reason=q&c=<token>&k={key}&co={co}"
-            f"&hl={hl}&size={size}&chr={chr}&vh={vh}&bg={bg}"
-        )
-        params = {
-            "ar": 1,
-            "k": key,
-            "co": co,
-            "hl": hl,
-            "v": v,
-            "size": size,
-            "cb": cb
-        }
-        anchor = self.session.get(
-            f"{self.recaptcha_api}/anchor", params=params).text
-        recaptcha_token = anchor.split('recaptcha-token" value="')[1].split('">')[0]
-        data = parameters.replace("<token>", recaptcha_token)
-        self.session.headers["Content-Type"] = "application/x-www-form-urlencoded"
-        response = self.session.post(
-            f"{self.recaptcha_api}/reload?k={key}", data=data).text
-        return response.split(
-            '"rresp","')[1].split('"')[0] if "rresp" in response else response
+	def _post(self, endpoint: str, data: dict) -> dict:
+		return self.session.post(f"{self.api}{endpoint}", json=data).json()
+
+	def _get(self, endpoint: str, params: dict = None) -> dict:
+		return self.session.get(f"{self.api}{endpoint}", params=params).json()
+
+	def _put(self, endpoint: str, data: dict) -> dict:
+		return self.session.put(f"{self.api}{endpoint}", data=data).json()
 
 	def login(
 			self,
@@ -54,8 +28,7 @@ class Recomics:
 			"password": password,
 			"g-recaptcha-response": self.generate_captcha()
 		}
-		response = self.session.post(
-			f"{self.api}/api/users/login/", data=data).json()
+		response = self._post("/api/users/login/", data)
 		if "content" in response:
 			self.user_id = response["content"]["id"]
 			self.access_token = response["content"]["access_token"]
@@ -74,45 +47,35 @@ class Recomics:
 			"text": text,
 			"title": title_id
 		}
-		return self.session.post(
-			f"{self.api}/api/activity/comments/?title_id={title_id}", data=data).json()
-
-	def logging(self, path_name: str = "/") -> dict:
-		data = {
-			"user": self.user_id,
-			"access_token": self.access_token,
-			"msg": "CONSOLE",
-			"location": {
-				"pathname": path_name,
-				"search": "",
-				"hash": "",
-				"key": ""
-			},
-			"deviceType": "desktop",
-			"appVersion": "5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36",
-			"userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36"
-		}
-		return self.session.post(
-			f"{self.api}/api/logging/", data=data).json()
+		return self._post(
+			f"/api/activity/comments/?title_id={title_id}", data)
 
 	def similar_titles(self, title: str) -> dict:
-		return self.session.get(
-			f"{self.api}/api/titles/{title}/similar/").json()
+		return self._get(
+			f"/api/titles/{title}/similar/")
 
 	def search_title(
 			self,
-			title: str,
+			query: str,
 			count: int = 5) -> dict:
-		return self.session.get(
-			f"{self.api}/api/search/?query={title}&count={count}").json()
+		params = {
+			"query": query,
+			"count": count
+		}
+		return self._get("/api/search", params)
 
 	def search_publishers(
 			self,
-			username: str,
+			query: str,
 			page: int = 1,
 			count: int = 10) -> dict:
-		return self.session.get(
-			f"{self.api}/api/search/?count={count}&field=publishers&page={page}&query={username}").json()
+		params = {
+			"count": count,
+			"field": "publishers",
+			"page": page,
+			"query": query
+		}
+		return self._get("/api/search", params)
 
 	def edit_profile(
 			self,
@@ -127,12 +90,14 @@ class Recomics:
 		}
 		if username:
 			data["username"] = username
-		return self.session.put(
-			f"{self.api}/api/users/current/", data=data).json()
+		return self._put("/api/users/current/", data)
 
 	def get_report_reasons(self) -> dict:
-		return self.session.get(
-			f"{self.api}/api/reports/?get=reasons&type=title").json()
+		params = {
+			"get": "reasons",
+			"type": "title"
+		}
+		return self._get("/api/reports/", params)
 
 	def send_report(
 			self,
@@ -146,8 +111,7 @@ class Recomics:
 			"target": title_id,
 			"type": type
 		}
-		return self.session.post(
-			f"{self.api}/panel/api/reports/", data=data).json()
+		return self._post("/panel/api/reports/", data)
 
 	def like_comment(
 			self,
@@ -157,20 +121,22 @@ class Recomics:
 			"comment": comment_id,
 			"type": type
 		}
-		return self.session.post(
-			f"{self.api}/api/activity/votes/", data=data).json()
+		return self._post("/api/activity/votes/", data)
 
 	def get_genres(self) -> dict:
-		return self.session.get(
-			f"{self.api}/api/forms/titles/?get=genres").json()
+		params = {
+			"get": "genres"
+		}
+		return self._get("/api/forms/titles/", params)
 
 	def get_title_info(self, title: str) -> dict:
-		return self.session.get(
-			f"{self.api}/api/titles/{title}/").json()
+		return self._get(f"/api/titles/{title}/")
 
 	def get_title_chapters(self, branch_id: int) -> dict:
-		return self.session.get(
-			f"{self.api}/api/titles/chapters/?branch_id={branch_id}").json()
+		params = {
+			"branch_id": branch_id
+		}
+		return self._get("/api/titles/chapters/", params)
 
 	def get_title_comments(
 			self,
@@ -182,12 +148,10 @@ class Recomics:
 			"page": page,
 			"ordering": ordering
 		}
-		return self.session.get(
-			f"{self.api}/api/activity/comments/?title_id={title_id}&page={page}&ordering={ordering}",
-			data=data).json()
+		return self._get("/api/activity/comments/", params)
 
 	def get_user_info(self, user_id: str) -> dict:
-		return self.session.get(f"{self.api}/api/users/{user_id}").json()
+		return self._get(f"/api/users/{user_id}")
 
 	def get_notifications(
 			self,
@@ -195,26 +159,37 @@ class Recomics:
 			page: int = 1,
 			status: int = 0,
 			type: int = 0) -> dict:
-		return self.session.get(
-			f"{self.api}/api/users/notifications/?count={count}&page={page}&status={status}&type={type}").json()
+		params = {
+			"count": count,
+			"page": page,
+			"status": status,
+			"type": type
+		}
+		return self._get("/api/users/notifications/", params)
 
 	def get_notifications_count(self) -> dict:
-		return self.session.get(
-			f"{self.api}/api/users/notifications/count/").json()
+		return self._get("/api/users/notifications/count/")
 
 	def get_account_info(self) -> dict:
-		return self.session.get(f"{self.api}/api/users/current/").json()
+		return self._get("/api/users/current/")
 
 	def get_daily_top_titles(self, count: int = 5) -> dict:
-		return self.session.get(
-			f"{self.api}/api/titles/daily-top/?count={count}").json()
+		params = {
+			"count": count
+		}
+		return self._get(
+			"/api/titles/daily-top/", params)
 
 	def get_titles_last_chapters(
 			self,
 			page: int = 1,
 			count: int = 5) -> dict:
-		return self.session.get(
-			f"{self.api}/api/titles/last-chapters/?page={page}&count={count}").json()
+		params = {
+			"page": page,
+			"count": count
+		}
+		return self._get(
+			"/api/titles/last-chapters/", params)
 
 	def add_to_bookmarks(
 			self,
@@ -234,8 +209,7 @@ class Recomics:
 			"title": title_id,
 			"type": type
 		}
-		return self.session.post(
-			f"{self.api}/api/users/bookmarks/", data=data).json()
+		return self._post("/api/users/bookmarks/", data)
 
 	def change_password(
 			self,
@@ -246,16 +220,13 @@ class Recomics:
 			"confirm_password": new_password,
 			"password": new_password
 		}
-		return self.session.put(
-			f"{self.api}/api/users/current/", data=data).json()
+		return self._put("/api/users/current/", data)
 
 	def bill_promo_code(self, promo_code: str) -> dict:
 		data = {
 			"promo_code": promo_code
 		}
-		return self.session.post(
-			f"{self.api}/api/billing/promo-codes/",
-			data=data).json()
+		return self._post("/api/billing/promo-codes/", data)
 
 	def create_publishers(
 			self,
@@ -265,8 +236,7 @@ class Recomics:
 			"name": name,
 			"vk": vk_url
 		}
-		return self.session.post(
-			f"{self.api}/api/publishers/", data=data).json()
+		return self._post("/api/publishers/", data)
 
 	def rate_title(
 			self,
@@ -276,9 +246,7 @@ class Recomics:
 			"rating": rating,
 			"title": title_id
 		}
-		return self.session.post(
-			f"{self.api}/api/activity/ratings/",
-			data=data).json()
+		return self._post("/api/activity/ratings/", data)
 
 	def like_chapter(
 			self,
@@ -288,51 +256,82 @@ class Recomics:
 			"chapter": chapter_id,
 			"type": type
 		}
-		return self.session.post(
-			f"{self.api}/api/activity/votes/",
-			data=data).json()
+		return self._post(
+			"/api/activity/votes/", data)
 
 	def get_categories(self) -> dict:
-		return self.session.get(
-			f"{self.api}/api/forms/titles/?get=categories").json()
+		params = {
+			"get": "categories"
+		}
+		return self._get(
+			"/api/forms/titles/", params)
 
 	def get_age_limits(self) -> dict:
-		return self.session.get(
-			f"{self.api}/api/forms/titles/?get=age_limit").json()
+		params = {
+			"get": "age_limit"
+		}
+		return self._get(
+			"/api/forms/titles/", params)
 
 	def get_types(self) -> dict:
-		return self.session.get(
-			f"{self.api}/api/forms/titles/?get=types").json()
+		params = {
+			"get": "types"
+		}
+		return self._get(
+			"/api/forms/titles/", params)
 
 	def get_statuses(self) -> dict:
-		return self.session.get(
-			f"{self.api}/api/forms/titles/?get=status").json()
+		params = {
+			"get": "statys"
+		}
+		return self._get(
+			"/api/forms/titles/", params)
 
 	def get_user_bookmarks(
 			self,
 			type: int,
 			user_id: int,
 			page: int = 1) -> dict:
-		return self.session.get(
-			f"{self.api}/api/users/{user_id}/bookmarks/?ordering=-chapter_date&page={page}&type={type}").json()
+		params = {
+			"ordering": "chapter-date",
+			"page": page,
+			"type": type
+		}
+		return self._get(
+			f"/api/users/{user_id}/bookmarks/", params)
 
 	def get_user_history(
 			self,
 			user_id: int,
 			page: int = 1) -> dict:
-		return self.session.get(
-			f"{self.api}/api/users/{user_id}/history/?page={page}").json()
+		params = {
+			"page": page
+		}
+		return self._get(
+			f"/api/users/{user_id}/history", params)
 
 	def get_social_notifications(
 			self,
 			count: int = 30,
 			page: int = 1) -> dict:
-		return self.session.get(
-			f"{self.api}/api/users/notifications/?count={count}&page={page}&status=0&type=1").json()
+		params = {
+			"count": count,
+			"page": page,
+			"status": 0,
+			"type": 1
+		}
+		return self._get(
+			"/api/users/notifications/", params)
 
 	def get_important_notifications(
 			self,
 			count: int = 30,
 			page: int = 1) -> dict:
-		return self.session.get(
-			f"{self.api}/api/users/notifications/?count={count}&page={page}&status=0&type=2").json()
+		params = {
+			"count": count,
+			"page": page,
+			"status": 0,
+			"type": 2
+		}
+		return self._get(
+			f"/api/users/notifications/", params)
