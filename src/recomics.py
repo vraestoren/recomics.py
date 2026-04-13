@@ -17,7 +17,7 @@ class Recomics:
 		return self.session.get(f"{self.api}{endpoint}", params=params).json()
 
 	def _put(self, endpoint: str, data: dict) -> dict:
-		return self.session.put(f"{self.api}{endpoint}", data=data).json()
+		return self.session.put(f"{self.api}{endpoint}", json=data).json()
 
 	def login(
 			self,
